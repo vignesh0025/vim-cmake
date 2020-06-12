@@ -1,3 +1,11 @@
+" TODO: Set cmake build type command
+" TODO: check if CMakeLists exist
+" TODO: Add support for windows since we use perl
+"
+
+" let s:shell_check_exit = '; read -n 1 -s -r -p "Press any key to continue"'
+let s:shell_check_exit = '; read -k1 -s; tmux select-pane -l'
+
 if !exists("g:cmake_build_dir")
     let g:cmake_build_dir = "./build"
 end
@@ -8,8 +16,9 @@ end
 
 function! cmake#make(cmd)
     let s:command = 'cmake -B '.g:cmake_build_dir
-    echo "Cmake Executed: ".s:command
-    echo system(s:command)
+    echom "Cmake Executed: ".s:command
+    " echom system(s:command)
+    execute 'VtrSendCommandToRunner!'.s:command
     " echo 'cmake --B '.g:cmake_build_dir
 endfunction
 
@@ -19,8 +28,9 @@ function! cmake#cbuild(...)
     " a:1 -> returns the first argument and we expect executable name to execute
     let s:executable = get(a:, 1, cmake#getCurrentExecutable())
     let s:command = 'cmake --build '.g:cmake_build_dir.' --config '.g:cmake_build_type.' --target '.s:executable
-    echo "Cmake Executed: ".s:command
-    echo system(s:command)
+    echom "Cmake Executed: ".s:command
+    " echom system(s:command)
+    execute 'VtrSendCommandToRunner!'.s:command
 endfunction
 
 function! cmake#getCurrentExecutable()
@@ -48,11 +58,19 @@ endfunction
 function! cmake#runExecutable(...)
     " If a executable name is passed, execute it. Otherwise, execute the current
     " detected executable
-    let s:temp = cmake#getCurrentExecutable()
-    let s:executable = get(a:, 1, s:temp)
-    let s:command = g:cmake_build_dir.'/'.s:executable
-    echo "Cmake Executed: ".s:command
-    echo system(s:command)
+    if !exists("g:cmake_exec_name")
+        let s:temp = cmake#getCurrentExecutable()
+        let s:executable = get(a:, 1, s:temp)
+        "let s:command = substitute('sh -c '.g:cmake_build_dir.'/'.s:executable, "^L", "", "")
+        let s:command = 'sh -c '.g:cmake_build_dir.'/'.s:executable
+    else
+        let s:command = 'sh -c '.g:cmake_build_dir.'/'.g:cmake_exec_name
+    endif
+    echom "Cmake Executed: ".s:command
+    " To pass argument to a command, we must use execute
+    execute 'VtrOpenRunner'
+    execute 'VtrSendCommandToRunner!'.s:command.s:shell_check_exit
+    execute 'VtrFocusRunner'
 endfunction
 
 
